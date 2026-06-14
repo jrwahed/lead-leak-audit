@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lead Leak Audit — حاسبة تسريب الليدز
 
-## Getting Started
+أداة ويب تفاعلية مجانية لأصحاب الشركات. ارفع ملف الليدز أو دخّل الأرقام يدوي، واعرف فوراً فين بيضيع أكبر عدد عملاء وكام فلوس بتخسر شهرياً.
 
-First, run the development server:
+**Privacy-first**: التحليل بالكامل client-side — الملف لا يترفع على أي سيرفر.
+
+## Tech Stack
+- Next.js 15 (App Router) + TypeScript + Tailwind CSS v4
+- PapaParse (CSV) + SheetJS (Excel) — client-side parsing
+- RTL / Arabic
+
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy to Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Option 1: Vercel CLI
+```bash
+npm i -g vercel
+vercel
+```
 
-## Learn More
+### Option 2: GitHub
+1. Push this repo to GitHub
+2. Go to vercel.com/new
+3. Import the repo and deploy
 
-To learn more about Next.js, take a look at the following resources:
+### Environment Variables (Vercel Dashboard > Settings > Environment Variables)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_LEAD_WEBHOOK_URL` | No | POST endpoint for lead capture form (e.g. Make/Zapier webhook URL) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+If not set, form submissions log to the browser console.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Customization
+- **About section**: Edit name, bio, and links in `src/app/page.tsx` (search for "محمد وحيد")
+- **Profile photo**: Replace `public/me.jpg`
+- **Benchmark close rate**: Change `benchmarkClose = 0.05` in the `analyze` function
+- **Default deal value**: Change the default `3000` in the input state
