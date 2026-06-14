@@ -384,29 +384,77 @@ interface FileState {
   rows: Record<string, string>[];
   columns: string[];
   statusCol: string | null;
-  statusValues: string[];
+  statusValues: ValueWithCount[];
+  columnScores: { col: string; score: number; uniqueCount: number; fillRate: number }[];
 }
 
-const STATUS_HINTS = [
-  "status", "الحالة", "حالة", "state", "stage", "مرحلة",
-  "حجز", "ردّ", "رد", "مردش", "تم", "نتيجة", "result",
+interface ValueWithCount {
+  value: string;
+  count: number;
+}
+
+const HIGH_PRIORITY_HINTS = [
+  "فيد باك", "فيدباك", "feedback", "حالة الليد", "حاله الليد",
+  "lead status", "status", "lead_status", "المتابعة", "متابعة",
+  "follow", "stage", "مرحلة", "نتيجة", "result", "outcome",
 ];
 
-function detectStatusColumn(columns: string[]): string | null {
-  for (const col of columns) {
-    const lower = col.toLowerCase().trim();
-    if (STATUS_HINTS.some((h) => lower.includes(h))) return col;
-  }
-  return null;
-}
+const LOW_PRIORITY_HINTS = [
+  "حالة", "حاله", "state",
+];
 
-function getUniqueValues(rows: Record<string, string>[], col: string): string[] {
-  const set = new Set<string>();
+function scoreColumn(
+  col: string,
+  rows: Record<string, string>[],
+): { score: number; uniqueCount: number; fillRate: number } {
+  const lower = col.toLowerCase().trim();
+
+  let score = 0;
+  if (HIGH_PRIORITY_HINTS.some((h) => lower.includes(h))) score += 100;
+  else if (LOW_PRIORITY_HINTS.some((h) => lower === h || lower.includes(h))) score += 30;
+
+  let filled = 0;
+  const vals = new Set<string>();
   for (const row of rows) {
     const v = (row[col] || "").trim();
-    if (v) set.add(v);
+    if (v) { filled++; vals.add(v); }
   }
-  return Array.from(set).sort();
+
+  const fillRate = rows.length > 0 ? filled / rows.length : 0;
+  const uniqueCount = vals.size;
+
+  if (fillRate > 0.3) score += 20;
+  if (fillRate > 0.6) score += 10;
+
+  if (uniqueCount >= 3 && uniqueCount <= 30) score += 30;
+  else if (uniqueCount > 30 && uniqueCount <= 80) score += 15;
+  else if (uniqueCount > 80) score += 5;
+
+  if (uniqueCount >= 2 && uniqueCount <= 15 && fillRate > 0.5) score += 25;
+
+  return { score, uniqueCount, fillRate };
+}
+
+function detectStatusColumn(
+  columns: string[],
+  rows: Record<string, string>[],
+): { best: string | null; scores: { col: string; score: number; uniqueCount: number; fillRate: number }[] } {
+  const scores = columns.map((col) => ({ col, ...scoreColumn(col, rows) }));
+  scores.sort((a, b) => b.score - a.score);
+
+  const best = scores.length > 0 && scores[0].score >= 40 ? scores[0].col : null;
+  return { best, scores };
+}
+
+function getValuesWithCounts(rows: Record<string, string>[], col: string): ValueWithCount[] {
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    const v = (row[col] || "").trim();
+    if (v) map.set(v, (map.get(v) || 0) + 1);
+  }
+  return Array.from(map.entries())
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count);
 }
 
 /* ───────────── Main Page ───────────── */
@@ -479,13 +527,11 @@ export default function Home() {
   }, []);
 
   const finishFileParse = (rows: Record<string, string>[], columns: string[]) => {
-    const statusCol = detectStatusColumn(columns);
-    const statusValues = statusCol ? getUniqueValues(rows, statusCol) : [];
-    setFileState({ rows, columns, statusCol, statusValues });
-    if (statusCol) {
-      setSelectedStatusCol(statusCol);
-      setMappingStep(true);
-    }
+    const { best, scores } = detectStatusColumn(columns, rows);
+    const statusValues = best ? getValuesWithCounts(rows, best) : [];
+    setFileState({ rows, columns, statusCol: best, statusValues, columnScores: scores });
+    setSelectedStatusCol(best || "");
+    setMappingStep(false);
   };
 
   const handleFileDrop = useCallback((e: React.DragEvent) => {
@@ -503,13 +549,15 @@ export default function Home() {
   const handleStatusColSelect = (col: string) => {
     if (!fileState) return;
     setSelectedStatusCol(col);
-    const vals = getUniqueValues(fileState.rows, col);
+    const vals = getValuesWithCounts(fileState.rows, col);
     setFileState({ ...fileState, statusCol: col, statusValues: vals });
     setMappingStep(true);
     setContactedVals([]);
     setBookedVals([]);
     setClosedVals([]);
+    setValSearch("");
   };
+  const [valSearch, setValSearch] = useState("");
 
   const toggleVal = (arr: string[], setArr: React.Dispatch<React.SetStateAction<string[]>>, val: string) => {
     setArr(arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
@@ -623,106 +671,193 @@ export default function Home() {
                 <p className="text-sm text-[#6B6A7A]">CSV أو Excel — مفيش حاجة بتترفع</p>
               </div>
             ) : !mappingStep ? (
+              /* ── Step 1: Column Picker ── */
               <div className="bg-white rounded-2xl p-6 border border-[#E8E6E1] space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold">{fmt(fileState.rows.length)} صف (ليد)</p>
-                    <p className="text-sm text-[#6B6A7A]">{fileState.columns.length} عمود</p>
+                    <p className="text-sm text-[#6B6A7A]">{fileState.columns.length} عمود — اختار العمود اللي فيه حالة الليد أو الفيدباك</p>
                   </div>
                   <button onClick={() => { setFileState(null); setMappingStep(false); }} className="text-sm text-[#C0563B] hover:underline">
                     غيّر الملف
                   </button>
                 </div>
-                <div>
-                  <p className="text-sm font-medium mb-2">اختار عمود الحالة/الستاتس:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {fileState.columns.map((col) => (
-                      <button
-                        key={col}
-                        onClick={() => handleStatusColSelect(col)}
-                        className={`px-3 py-1.5 rounded-lg text-sm border transition ${
-                          selectedStatusCol === col
-                            ? "bg-[#0E7C66] text-white border-[#0E7C66]"
-                            : "border-[#E8E6E1] hover:border-[#0E7C66]/50"
-                        }`}
-                      >
-                        {col}
-                      </button>
-                    ))}
-                  </div>
+                <div className="space-y-2">
+                  {fileState.columnScores
+                    .filter((cs) => cs.fillRate > 0.01)
+                    .map((cs) => {
+                      const isRecommended = cs.score >= 40;
+                      const isSelected = selectedStatusCol === cs.col;
+                      return (
+                        <button
+                          key={cs.col}
+                          onClick={() => {
+                            setSelectedStatusCol(cs.col);
+                          }}
+                          className={`w-full text-start px-4 py-3 rounded-xl border transition flex items-center justify-between gap-3 ${
+                            isSelected
+                              ? "bg-[#0E7C66]/5 border-[#0E7C66] ring-1 ring-[#0E7C66]/30"
+                              : "border-[#E8E6E1] hover:border-[#0E7C66]/40"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                              isSelected ? "border-[#0E7C66]" : "border-[#E8E6E1]"
+                            }`}>
+                              {isSelected && <div className="w-2 h-2 rounded-full bg-[#0E7C66]" />}
+                            </div>
+                            <span className="font-medium truncate">{cs.col}</span>
+                            {isRecommended && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-[#0E7C66]/10 text-[#0E7C66] font-medium flex-shrink-0">
+                                مقترح
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-[#6B6A7A] flex-shrink-0">
+                            {cs.uniqueCount} قيمة · {Math.round(cs.fillRate * 100)}% مملوء
+                          </span>
+                        </button>
+                      );
+                    })}
                 </div>
                 <button
+                  onClick={() => {
+                    if (selectedStatusCol) handleStatusColSelect(selectedStatusCol);
+                  }}
+                  disabled={!selectedStatusCol}
+                  className="w-full py-3 rounded-xl bg-[#0E7C66] text-white font-semibold hover:bg-[#0E7C66]/90 transition disabled:opacity-40"
+                >
+                  التالي — صنّف القيم
+                </button>
+                <button
                   onClick={() => setTab("manual")}
-                  className="text-sm text-[#6B6A7A] hover:text-[#0E7C66] transition"
+                  className="text-sm text-[#6B6A7A] hover:text-[#0E7C66] transition w-full text-center"
                 >
                   مش لاقي عمود مناسب؟ جرّب الإدخال اليدوي
                 </button>
               </div>
             ) : (
+              /* ── Step 2: Value Mapping ── */
               <div className="bg-white rounded-2xl p-6 border border-[#E8E6E1] space-y-5">
                 <div className="flex items-center justify-between">
                   <p className="font-semibold">
                     {fmt(fileState.rows.length)} ليد — عمود: &quot;{selectedStatusCol}&quot;
                   </p>
-                  <button onClick={() => { setFileState(null); setMappingStep(false); }} className="text-sm text-[#C0563B] hover:underline">
-                    غيّر الملف
-                  </button>
+                  <div className="flex gap-3">
+                    <button onClick={() => setMappingStep(false)} className="text-sm text-[#0E7C66] hover:underline">
+                      غيّر العمود
+                    </button>
+                    <button onClick={() => { setFileState(null); setMappingStep(false); }} className="text-sm text-[#C0563B] hover:underline">
+                      غيّر الملف
+                    </button>
+                  </div>
                 </div>
 
                 <p className="text-sm text-[#6B6A7A]">
-                  صنّف قيم الستاتس على المراحل دي (ممكن تختار أكتر من قيمة لكل مرحلة):
+                  صنّف القيم على المراحل دي (ممكن تختار أكتر من قيمة لكل مرحلة). الأرقام جنب كل قيمة = عدد الليدز فيها.
                 </p>
 
-                <div>
-                  <p className="text-sm font-semibold mb-2 text-[#0E7C66]">اتكلمنا معاه (تم التواصل)</p>
-                  <div className="flex flex-wrap gap-2">
-                    {fileState.statusValues.map((v) => (
-                      <button
-                        key={v}
-                        onClick={() => toggleVal(contactedVals, setContactedVals, v)}
-                        className={`px-3 py-1.5 rounded-lg text-sm border transition ${
-                          contactedVals.includes(v) ? "bg-[#0E7C66]/10 border-[#0E7C66] text-[#0E7C66]" : "border-[#E8E6E1]"
-                        }`}
-                      >
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* Search filter */}
+                {fileState.statusValues.length > 15 && (
+                  <input
+                    type="text"
+                    value={valSearch}
+                    onChange={(e) => setValSearch(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#E8E6E1] bg-[#FAF8F4] focus:outline-none focus:ring-2 focus:ring-[#0E7C66]/30 focus:border-[#0E7C66] transition text-sm"
+                    placeholder="ابحث في القيم..."
+                  />
+                )}
 
-                <div>
-                  <p className="text-sm font-semibold mb-2 text-[#B08D57]">حجز / اهتمام جاد</p>
-                  <div className="flex flex-wrap gap-2">
-                    {fileState.statusValues.map((v) => (
-                      <button
-                        key={v}
-                        onClick={() => toggleVal(bookedVals, setBookedVals, v)}
-                        className={`px-3 py-1.5 rounded-lg text-sm border transition ${
-                          bookedVals.includes(v) ? "bg-[#B08D57]/10 border-[#B08D57] text-[#B08D57]" : "border-[#E8E6E1]"
-                        }`}
-                      >
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {(() => {
+                  const filtered = fileState.statusValues.filter(
+                    (sv) => !valSearch || sv.value.includes(valSearch)
+                  );
+                  const selectedVals = new Set([...contactedVals, ...bookedVals, ...closedVals]);
+                  const selectedItems = filtered.filter((sv) => selectedVals.has(sv.value));
+                  const unselectedItems = filtered.filter((sv) => !selectedVals.has(sv.value));
 
-                <div>
-                  <p className="text-sm font-semibold mb-2 text-[#0E7C66]">قفل صفقة</p>
-                  <div className="flex flex-wrap gap-2">
-                    {fileState.statusValues.map((v) => (
-                      <button
-                        key={v}
-                        onClick={() => toggleVal(closedVals, setClosedVals, v)}
-                        className={`px-3 py-1.5 rounded-lg text-sm border transition ${
-                          closedVals.includes(v) ? "bg-[#0E7C66]/20 border-[#0E7C66] text-[#0E7C66]" : "border-[#E8E6E1]"
-                        }`}
-                      >
-                        {v}
-                      </button>
-                    ))}
+                  const renderValButton = (sv: ValueWithCount) => {
+                    const inContacted = contactedVals.includes(sv.value);
+                    const inBooked = bookedVals.includes(sv.value);
+                    const inClosed = closedVals.includes(sv.value);
+                    let style = "border-[#E8E6E1]";
+                    let badge = "";
+                    if (inContacted) { style = "bg-[#0E7C66]/10 border-[#0E7C66] text-[#0E7C66]"; badge = "تواصل"; }
+                    if (inBooked) { style = "bg-[#B08D57]/10 border-[#B08D57] text-[#B08D57]"; badge = "حجز"; }
+                    if (inClosed) { style = "bg-[#0E7C66]/20 border-[#0E7C66] text-[#0E7C66] font-semibold"; badge = "صفقة"; }
+
+                    return (
+                      <div key={sv.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition ${style}`}>
+                        <span className="flex-1 truncate">{sv.value}</span>
+                        <span className="text-xs opacity-60 flex-shrink-0">({sv.count})</span>
+                        {badge && <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/60 flex-shrink-0">{badge}</span>}
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => {
+                              if (inBooked) toggleVal(bookedVals, setBookedVals, sv.value);
+                              if (inClosed) toggleVal(closedVals, setClosedVals, sv.value);
+                              toggleVal(contactedVals, setContactedVals, sv.value);
+                            }}
+                            title="تواصل"
+                            className={`w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center transition ${
+                              inContacted ? "bg-[#0E7C66] text-white" : "bg-[#E8E6E1]/50 hover:bg-[#0E7C66]/20 text-[#6B6A7A]"
+                            }`}
+                          >ت</button>
+                          <button
+                            onClick={() => {
+                              if (inContacted) toggleVal(contactedVals, setContactedVals, sv.value);
+                              if (inClosed) toggleVal(closedVals, setClosedVals, sv.value);
+                              toggleVal(bookedVals, setBookedVals, sv.value);
+                            }}
+                            title="حجز"
+                            className={`w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center transition ${
+                              inBooked ? "bg-[#B08D57] text-white" : "bg-[#E8E6E1]/50 hover:bg-[#B08D57]/20 text-[#6B6A7A]"
+                            }`}
+                          >ح</button>
+                          <button
+                            onClick={() => {
+                              if (inContacted) toggleVal(contactedVals, setContactedVals, sv.value);
+                              if (inBooked) toggleVal(bookedVals, setBookedVals, sv.value);
+                              toggleVal(closedVals, setClosedVals, sv.value);
+                            }}
+                            title="صفقة"
+                            className={`w-6 h-6 rounded text-[10px] font-bold flex items-center justify-center transition ${
+                              inClosed ? "bg-[#1C1B29] text-white" : "bg-[#E8E6E1]/50 hover:bg-[#1C1B29]/10 text-[#6B6A7A]"
+                            }`}
+                          >ص</button>
+                        </div>
+                      </div>
+                    );
+                  };
+
+                  return (
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                      {/* Legend */}
+                      <div className="flex gap-4 text-xs text-[#6B6A7A] pb-2 border-b border-[#E8E6E1] sticky top-0 bg-white z-10 pt-1">
+                        <span><strong className="text-[#0E7C66]">ت</strong> = تم التواصل</span>
+                        <span><strong className="text-[#B08D57]">ح</strong> = حجز/اهتمام</span>
+                        <span><strong className="text-[#1C1B29]">ص</strong> = قفل صفقة</span>
+                      </div>
+                      {selectedItems.map(renderValButton)}
+                      {unselectedItems.map(renderValButton)}
+                    </div>
+                  );
+                })()}
+
+                {/* Summary of selections */}
+                {(contactedVals.length > 0 || bookedVals.length > 0 || closedVals.length > 0) && (
+                  <div className="bg-[#FAF8F4] rounded-xl p-4 space-y-1.5 text-sm">
+                    {contactedVals.length > 0 && (
+                      <p><span className="text-[#0E7C66] font-semibold">تواصل:</span> {contactedVals.length} قيمة ({fmt(fileState.rows.filter(r => contactedVals.includes((r[selectedStatusCol] || "").trim())).length)} ليد)</p>
+                    )}
+                    {bookedVals.length > 0 && (
+                      <p><span className="text-[#B08D57] font-semibold">حجز:</span> {bookedVals.length} قيمة ({fmt(fileState.rows.filter(r => bookedVals.includes((r[selectedStatusCol] || "").trim())).length)} ليد)</p>
+                    )}
+                    {closedVals.length > 0 && (
+                      <p><span className="text-[#1C1B29] font-semibold">صفقة:</span> {closedVals.length} قيمة ({fmt(fileState.rows.filter(r => closedVals.includes((r[selectedStatusCol] || "").trim())).length)} ليد)</p>
+                    )}
                   </div>
-                </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium mb-1">متوسط ربح الصفقة (ج.م)</label>
