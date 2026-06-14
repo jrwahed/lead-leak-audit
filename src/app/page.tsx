@@ -1149,7 +1149,7 @@ export default function Home() {
               </p>
               <div className="flex gap-3 justify-center md:justify-start">
                 <a
-                  href="https://linkedin.com/in/YOUR_LINKEDIN"
+                  href="https://www.linkedin.com/in/moohamedwaheed/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#E8E6E1] text-sm font-medium hover:border-[#0E7C66]/50 hover:text-[#0E7C66] transition"
@@ -1158,7 +1158,7 @@ export default function Home() {
                   LinkedIn
                 </a>
                 <a
-                  href="https://wa.me/YOUR_WHATSAPP"
+                  href="https://wa.me/201148627137"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#E8E6E1] text-sm font-medium hover:border-[#0E7C66]/50 hover:text-[#0E7C66] transition"
