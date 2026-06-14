@@ -479,6 +479,7 @@ export default function Home() {
   const [closedVals, setClosedVals] = useState<string[]>([]);
   const [fileAvgDeal, setFileAvgDeal] = useState("3000");
   const [dragOver, setDragOver] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToResults = useCallback(() => {
@@ -578,6 +579,28 @@ export default function Home() {
     scrollToResults();
   };
 
+  const downloadTemplate = () => {
+    const header = "الاسم,الموبايل,المصدر,حالة الليد,ملاحظات";
+    const rows = [
+      "أحمد محمد,01012345678,فيسبوك إعلان,رد واهتم,طلب عرض سعر",
+      "سارة علي,01198765432,واتساب,حجز موعد,ميعاد يوم الأحد",
+      "محمود حسن,01234567890,موقع الشركة,مردش,اتصلنا 3 مرات",
+      "نورا أحمد,01567890123,انستجرام,قفل صفقة,دفع وتم التسليم",
+      "خالد إبراهيم,01098765432,تحويل عميل,رد واهتم,عايز يشوف المكان",
+      "منى سعيد,01187654321,فيسبوك إعلان,كنسل,غيّر رأيه",
+      "عمر طارق,01276543210,جوجل إعلان,حجز موعد,أكد الميعاد",
+      "ياسمين فؤاد,01365432109,موقع الشركة,قفل صفقة,عقد + دفعة أولى",
+    ];
+    const csv = "﻿" + header + "\n" + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "lead-leak-audit-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <main className="flex-1">
       {/* ── Hero ── */}
@@ -646,29 +669,157 @@ export default function Home() {
             </div>
 
             {!fileState ? (
-              <div
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleFileDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition ${
-                  dragOver ? "border-[#0E7C66] bg-[#0E7C66]/5" : "border-[#E8E6E1] hover:border-[#0E7C66]/50 bg-white"
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-                <div className="w-16 h-16 rounded-2xl bg-[#0E7C66]/5 flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-[#0E7C66]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                  </svg>
+              <div className="space-y-4">
+                {/* Guide Toggle + Template */}
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setShowGuide(!showGuide)}
+                    className="text-sm font-medium text-[#0E7C66] hover:underline flex items-center gap-1.5"
+                  >
+                    <svg className={`w-4 h-4 transition-transform ${showGuide ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    إزاي أجهّز الشيت؟
+                  </button>
+                  <button
+                    onClick={downloadTemplate}
+                    className="text-sm font-medium text-[#B08D57] hover:underline flex items-center gap-1.5"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    حمّل تمبلت جاهز
+                  </button>
                 </div>
-                <p className="text-lg font-semibold mb-1">اسحب الملف هنا أو اضغط للاختيار</p>
-                <p className="text-sm text-[#6B6A7A]">CSV أو Excel — مفيش حاجة بتترفع</p>
+
+                {/* Guide Content */}
+                {showGuide && (
+                  <div className="bg-white rounded-2xl border border-[#E8E6E1] overflow-hidden animate-fade-in">
+                    {/* Step by step */}
+                    <div className="p-5 space-y-5">
+                      <div>
+                        <h4 className="font-bold text-base mb-3">الشيت بتاعك لازم يكون فيه عمود واحد على الأقل فيه &quot;حالة الليد&quot;</h4>
+                        <p className="text-sm text-[#6B6A7A] leading-relaxed mb-4">
+                          أي شيت فيه بيانات ليدز هينفع — مش مهم عدد الأعمدة أو أسماءها. المهم يكون فيه عمود بيوصف إيه اللي حصل مع كل ليد (رد، مردش، حجز، قفل، كنسل... إلخ). الأداة هتطلب منك تختار العمود ده وتصنّف القيم.
+                        </p>
+                      </div>
+
+                      {/* Visual Example Table */}
+                      <div>
+                        <p className="text-sm font-semibold mb-2">مثال — شكل الشيت الممتاز:</p>
+                        <div className="overflow-x-auto -mx-5 px-5">
+                          <table className="w-full text-sm border-collapse min-w-[500px]">
+                            <thead>
+                              <tr className="bg-[#FAF8F4]">
+                                <th className="border border-[#E8E6E1] px-3 py-2 text-start font-semibold">الاسم</th>
+                                <th className="border border-[#E8E6E1] px-3 py-2 text-start font-semibold">الموبايل</th>
+                                <th className="border border-[#E8E6E1] px-3 py-2 text-start font-semibold">المصدر</th>
+                                <th className="border border-[#E8E6E1] px-3 py-2 text-start font-semibold bg-[#0E7C66]/5">
+                                  <span className="text-[#0E7C66]">حالة الليد</span> ← ده العمود المهم
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5">أحمد محمد</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5" dir="ltr">0101234xxxx</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5">فيسبوك</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5 bg-[#0E7C66]/5 text-[#0E7C66] font-medium">رد واهتم</td>
+                              </tr>
+                              <tr>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5">سارة علي</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5" dir="ltr">0119876xxxx</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5">انستجرام</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5 bg-[#B08D57]/5 text-[#B08D57] font-medium">حجز موعد</td>
+                              </tr>
+                              <tr>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5">محمود حسن</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5" dir="ltr">0123456xxxx</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5">جوجل</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5 bg-[#C0563B]/5 text-[#C0563B] font-medium">مردش</td>
+                              </tr>
+                              <tr>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5">نورا أحمد</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5" dir="ltr">0156789xxxx</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5">موقع</td>
+                                <td className="border border-[#E8E6E1] px-3 py-1.5 bg-[#0E7C66]/10 text-[#0E7C66] font-bold">قفل صفقة</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* What works */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-[#E8F5F1] rounded-xl p-4">
+                          <p className="text-sm font-semibold text-[#0E7C66] mb-2">بينفع</p>
+                          <ul className="text-sm text-[#1C1B29] space-y-1.5">
+                            <li className="flex items-start gap-2"><span className="text-[#0E7C66] mt-0.5">&#10003;</span> أي عدد أعمدة — المهم عمود الحالة</li>
+                            <li className="flex items-start gap-2"><span className="text-[#0E7C66] mt-0.5">&#10003;</span> أسماء أعمدة عربي أو إنجليزي</li>
+                            <li className="flex items-start gap-2"><span className="text-[#0E7C66] mt-0.5">&#10003;</span> قيم حالة حرة (مردش، هيجي، كنسل، closed...)</li>
+                            <li className="flex items-start gap-2"><span className="text-[#0E7C66] mt-0.5">&#10003;</span> CSV أو Excel (.xlsx)</li>
+                            <li className="flex items-start gap-2"><span className="text-[#0E7C66] mt-0.5">&#10003;</span> تصدير من أي CRM أو Google Sheets</li>
+                          </ul>
+                        </div>
+                        <div className="bg-[#FDF0EC] rounded-xl p-4">
+                          <p className="text-sm font-semibold text-[#C0563B] mb-2">مش هينفع</p>
+                          <ul className="text-sm text-[#1C1B29] space-y-1.5">
+                            <li className="flex items-start gap-2"><span className="text-[#C0563B] mt-0.5">&#10007;</span> شيت فاضي أو بدون بيانات</li>
+                            <li className="flex items-start gap-2"><span className="text-[#C0563B] mt-0.5">&#10007;</span> شيت مفيهوش عمود حالة خالص</li>
+                            <li className="flex items-start gap-2"><span className="text-[#C0563B] mt-0.5">&#10007;</span> ملفات PDF أو صور</li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* Steps */}
+                      <div>
+                        <p className="text-sm font-semibold mb-3">الخطوات:</p>
+                        <div className="flex flex-col gap-2.5">
+                          {[
+                            { n: "1", t: "ارفع الملف", d: "CSV أو Excel" },
+                            { n: "2", t: "اختار عمود الحالة", d: "الأداة هتقترحلك الأنسب" },
+                            { n: "3", t: "صنّف القيم", d: "حدد كل قيمة = تواصل / حجز / صفقة" },
+                            { n: "4", t: "شوف النتيجة", d: "الفانل + التسريب + التوصية" },
+                          ].map((s) => (
+                            <div key={s.n} className="flex items-center gap-3">
+                              <div className="w-7 h-7 rounded-full bg-[#0E7C66] text-white text-sm font-bold flex items-center justify-center flex-shrink-0">{s.n}</div>
+                              <div>
+                                <span className="font-medium text-sm">{s.t}</span>
+                                <span className="text-xs text-[#6B6A7A] mr-2">— {s.d}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Drop Zone */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleFileDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition ${
+                    dragOver ? "border-[#0E7C66] bg-[#0E7C66]/5" : "border-[#E8E6E1] hover:border-[#0E7C66]/50 bg-white"
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <div className="w-16 h-16 rounded-2xl bg-[#0E7C66]/5 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-[#0E7C66]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                  </div>
+                  <p className="text-lg font-semibold mb-1">اسحب الملف هنا أو اضغط للاختيار</p>
+                  <p className="text-sm text-[#6B6A7A]">CSV أو Excel — مفيش حاجة بتترفع</p>
+                </div>
               </div>
             ) : !mappingStep ? (
               /* ── Step 1: Column Picker ── */
