@@ -156,7 +156,7 @@ function Funnel({ result }: { result: AnalysisResult }) {
                 )}
               </span>
             </div>
-            <div className="w-full bg-[#E8E6E1]/30 rounded-full h-10 overflow-hidden">
+            <div className="w-full bg-[#E8E6E1]/30 rounded-full h-8 sm:h-10 overflow-hidden">
               <div
                 className={`h-full rounded-full border ${s.color} transition-all duration-1000 ease-out flex items-center justify-center`}
                 style={{ width: `${width}%` }}
@@ -195,7 +195,7 @@ function Results({ result }: { result: AnalysisResult }) {
               <p className="text-2xl font-bold text-[#1C1B29] mb-1">
                 {leakLabels[result.biggestLeak]}
               </p>
-              <p className="text-3xl font-bold text-[#C0563B]">
+              <p className="text-2xl sm:text-3xl font-bold text-[#C0563B]">
                 <AnimatedNumber
                   value={
                     result.biggestLeak === 1
@@ -205,7 +205,7 @@ function Results({ result }: { result: AnalysisResult }) {
                       : result.leak3
                   }
                 />{" "}
-                <span className="text-lg font-medium">عميل ضايع</span>
+                <span className="text-sm sm:text-lg font-medium">عميل ضايع</span>
               </p>
             </div>
           </div>
@@ -215,19 +215,19 @@ function Results({ result }: { result: AnalysisResult }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8E6E1] text-center animate-fade-in" style={{ animationDelay: "300ms" }}>
             <p className="text-sm text-[#6B6A7A] mb-2">نسبة إغلاقك</p>
-            <p className="text-4xl font-bold text-[#C0563B] mb-1">{pct(result.overallClose)}</p>
+            <p className="text-3xl sm:text-4xl font-bold text-[#C0563B] mb-1">{pct(result.overallClose)}</p>
             <p className="text-sm text-[#0E7C66] font-medium">المفروض: {pct(result.benchmarkClose)}</p>
           </div>
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8E6E1] text-center animate-fade-in" style={{ animationDelay: "450ms" }}>
             <p className="text-sm text-[#6B6A7A] mb-2">صفقات بتخسرها شهرياً</p>
-            <p className="text-4xl font-bold text-[#C0563B]">
+            <p className="text-3xl sm:text-4xl font-bold text-[#C0563B]">
               <AnimatedNumber value={Math.round(result.lostDeals)} />
             </p>
             <p className="text-sm text-[#6B6A7A]">صفقة</p>
           </div>
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#E8E6E1] text-center animate-fade-in" style={{ animationDelay: "600ms" }}>
             <p className="text-sm text-[#6B6A7A] mb-2">فلوس ضايعة شهرياً</p>
-            <p className="text-4xl font-bold text-[#C0563B]">
+            <p className="text-3xl sm:text-4xl font-bold text-[#C0563B]">
               <AnimatedNumber value={Math.round(result.monthlyLoss)} suffix=" ج.م" />
             </p>
             <p className="text-sm text-[#6B6A7A]">
@@ -606,22 +606,22 @@ export default function Home() {
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-[#0E7C66]/[0.03] to-transparent pointer-events-none" />
-        <div className="max-w-4xl mx-auto px-4 pt-16 pb-12 md:pt-24 md:pb-16 text-center relative">
+        <div className="max-w-4xl mx-auto px-4 pt-10 pb-8 sm:pt-16 sm:pb-12 md:pt-24 md:pb-16 text-center relative">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0E7C66]/5 border border-[#0E7C66]/10 text-[#0E7C66] text-sm font-medium mb-6">
             <span className="w-2 h-2 rounded-full bg-[#0E7C66] animate-pulse" />
             أداة مجانية — التحليل جوه متصفحك بالكامل
           </div>
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4 tracking-tight">
             شركتك بتخسر عملاء كل يوم
             <br />
             <span className="text-[#C0563B]">في مكان مش شايفه.</span>
           </h1>
-          <p className="text-lg md:text-xl text-[#6B6A7A] max-w-2xl mx-auto mb-8 leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-[#6B6A7A] max-w-2xl mx-auto mb-8 leading-relaxed">
             في دقيقة واحدة، اعرف فين بيروح أكبر عدد عملاء، كام فلوس بتخسر، وإيه أول خطوة تصلّح بيها.
           </p>
           <a
             href="#input"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-[#0E7C66] text-white font-semibold text-lg hover:bg-[#0E7C66]/90 transition shadow-lg shadow-[#0E7C66]/20"
+            className="inline-flex items-center gap-2 px-6 py-3 sm:px-8 sm:py-4 rounded-xl bg-[#0E7C66] text-white font-semibold text-base sm:text-lg hover:bg-[#0E7C66]/90 transition shadow-lg shadow-[#0E7C66]/20"
           >
             ابدأ التحليل
             <svg className="w-5 h-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -630,6 +630,9 @@ export default function Home() {
           </a>
         </div>
       </section>
+
+      {/* Spacer for mobile scroll target */}
+      <div className="h-4 md:h-0" />
 
       {/* ── Input Section ── */}
       <section id="input" className="max-w-2xl mx-auto px-4 pb-12">
@@ -1038,7 +1041,7 @@ export default function Home() {
           <form onSubmit={handleManualSubmit} className="animate-fade-in">
             <div className="bg-white rounded-2xl p-6 md:p-8 border border-[#E8E6E1] shadow-sm space-y-4">
               <p className="text-sm text-[#6B6A7A] mb-2">أرقام الشهر الأخير:</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">عدد الليدز الكلي</label>
                   <input
@@ -1047,7 +1050,7 @@ export default function Home() {
                     min={1}
                     value={leads}
                     onChange={(e) => setLeads(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-[#E8E6E1] bg-[#FAF8F4] focus:outline-none focus:ring-2 focus:ring-[#0E7C66]/30 focus:border-[#0E7C66] transition text-lg"
+                    className="w-full px-4 py-3 rounded-xl border border-[#E8E6E1] bg-[#FAF8F4] focus:outline-none focus:ring-2 focus:ring-[#0E7C66]/30 focus:border-[#0E7C66] transition text-base"
                     placeholder="مثلاً 500"
                     dir="ltr"
                   />
@@ -1060,7 +1063,7 @@ export default function Home() {
                     min={0}
                     value={contacted}
                     onChange={(e) => setContacted(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-[#E8E6E1] bg-[#FAF8F4] focus:outline-none focus:ring-2 focus:ring-[#0E7C66]/30 focus:border-[#0E7C66] transition text-lg"
+                    className="w-full px-4 py-3 rounded-xl border border-[#E8E6E1] bg-[#FAF8F4] focus:outline-none focus:ring-2 focus:ring-[#0E7C66]/30 focus:border-[#0E7C66] transition text-base"
                     placeholder="مثلاً 350"
                     dir="ltr"
                   />
@@ -1073,7 +1076,7 @@ export default function Home() {
                     min={0}
                     value={booked}
                     onChange={(e) => setBooked(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-[#E8E6E1] bg-[#FAF8F4] focus:outline-none focus:ring-2 focus:ring-[#0E7C66]/30 focus:border-[#0E7C66] transition text-lg"
+                    className="w-full px-4 py-3 rounded-xl border border-[#E8E6E1] bg-[#FAF8F4] focus:outline-none focus:ring-2 focus:ring-[#0E7C66]/30 focus:border-[#0E7C66] transition text-base"
                     placeholder="مثلاً 80"
                     dir="ltr"
                   />
@@ -1086,7 +1089,7 @@ export default function Home() {
                     min={0}
                     value={deals}
                     onChange={(e) => setDeals(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-[#E8E6E1] bg-[#FAF8F4] focus:outline-none focus:ring-2 focus:ring-[#0E7C66]/30 focus:border-[#0E7C66] transition text-lg"
+                    className="w-full px-4 py-3 rounded-xl border border-[#E8E6E1] bg-[#FAF8F4] focus:outline-none focus:ring-2 focus:ring-[#0E7C66]/30 focus:border-[#0E7C66] transition text-base"
                     placeholder="مثلاً 20"
                     dir="ltr"
                   />
@@ -1125,7 +1128,7 @@ export default function Home() {
       )}
 
       {/* ── About Section ── */}
-      <section className="max-w-3xl mx-auto px-4 py-16">
+      <section className="max-w-3xl mx-auto px-4 py-10 sm:py-16">
         <div className="bg-white rounded-2xl p-6 md:p-10 border border-[#E8E6E1] shadow-sm">
           <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
             <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-[#0E7C66]/10 to-[#B08D57]/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
